@@ -37,14 +37,22 @@ fun main() {
     while (true) {
         println("""
         1 - Учить слова
-        2 - Статистика
+        2 - Статистика 
         0 - Выход
     """.trimIndent())
 
         val userInput = readLine()?.toIntOrNull()
         when (userInput) {
             1 -> println("Выбран пункт: \"Учить слова\"")
-            2 -> println("Выбран пункт: \"Статистика\"")
+            2 -> {
+                println("Выбран пункт: \"Статистика\"")
+                val totalCount = dictionary.size
+                val learnedCount = dictionary.filter { it.correctAnswersCount >= 3 }.size
+                val percent = (learnedCount / totalCount) * 100
+                println("Выучено $learnedCount из $totalCount слов | $percent%")
+                println()
+            }
+
             0 -> break
             else -> println("Введите число 1, 2 или 0")
         }
