@@ -2,6 +2,8 @@ package org.example
 
 import java.io.File
 
+const val MIN_CORRECT_ANSWER = 3
+
 data class Word(
     val original: String,
     val translate: String,
@@ -37,14 +39,29 @@ fun main() {
     while (true) {
         println("""
         1 - Учить слова
-        2 - Статистика
+        2 - Статистика 
         0 - Выход
     """.trimIndent())
 
         val userInput = readLine()?.toIntOrNull()
         when (userInput) {
             1 -> println("Выбран пункт: \"Учить слова\"")
-            2 -> println("Выбран пункт: \"Статистика\"")
+            2 -> {
+                println("Выбран пункт: \"Статистика\"")
+                val totalCount = dictionary.size
+
+                val learnedCount = dictionary.filter { it.correctAnswersCount >= MIN_CORRECT_ANSWER }.size
+
+                val percent: Int
+                if (totalCount > 0) {
+                    percent = (learnedCount * 100) / totalCount
+                } else {
+                    percent = 0
+                }
+                println("Выучено $learnedCount из $totalCount слов | $percent%")
+                println()
+            }
+
             0 -> break
             else -> println("Введите число 1, 2 или 0")
         }
