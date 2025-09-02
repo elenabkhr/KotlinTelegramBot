@@ -45,7 +45,34 @@ fun main() {
 
         val userInput = readLine()?.toIntOrNull()
         when (userInput) {
-            1 -> println("Выбран пункт: \"Учить слова\"")
+            1 -> {
+                println("Выбран пункт: \"Учить слова\"")
+
+                while (true) {
+                    val notLearnedList = dictionary.filter { it.correctAnswersCount < MIN_CORRECT_ANSWER }
+
+                    if (notLearnedList.isEmpty()) {
+                        println("Все слова в словаре выучены")
+                        break
+                    }
+
+                    val correctAnswer = notLearnedList.map { it.translate }
+
+                    val questionWords = notLearnedList.take(4)
+                        .map { it.original }
+                        .shuffled()
+
+                    println()
+                    println("Cлово: ${correctAnswer[0]}")
+
+                    if (correctAnswer.size > 1) {
+                        for (i in 0..correctAnswer.size - 1) {
+                            println("${i + 1} - ${questionWords[i]}")
+                        }
+                    }
+                }
+            }
+
             2 -> {
                 println("Выбран пункт: \"Статистика\"")
                 val totalCount = dictionary.size
