@@ -34,16 +34,12 @@ fun loadDictionary(): List<Word> {
     return dictionary
 }
 
-fun saveDictionary(index: Int) {
-    val dictionary = (loadDictionary())
-    dictionary[index].correctAnswersCount++
-
-    val newDictionary = dictionary.joinToString("\n") { it ->
-        "${it.original}|${it.translate}|${it.correctAnswersCount}"
-    }
-
+fun saveDictionary(dictionary: List<Word>) {
     val wordsFile = File("words.txt")
-    wordsFile.writeText(newDictionary)
+    wordsFile.writeText("")
+    dictionary.forEach { it ->
+        wordsFile.appendText("${it.original}|${it.translate}|${it.correctAnswersCount}\n")
+    }
 }
 
 fun main() {
@@ -90,8 +86,8 @@ fun main() {
 
                     when (userAnswerInput) {
                         (correctAnswerId) -> {
-                            saveDictionary(correctAnswerId - 1)
-
+                            correctAnswer.correctAnswersCount++
+                            saveDictionary(dictionary)
                             println("Правильно!")
                         }
 
@@ -107,17 +103,10 @@ fun main() {
             2 -> {
                 println("Выбран пункт: \"Статистика\"")
                 val totalCount = dictionary.size
-
-                val learnedCount = dictionary.filter { it.correctAnswersCount >= MIN_CORRECT_ANSWER }.size
-
-                val percent: Int
-                if (totalCount > 0) {
-                    percent = (learnedCount * 100) / totalCount
-                } else {
-                    percent = 0
-                }
-                println("Выучено $learnedCount из $totalCount слов | $percent%")
-                println()
+                val learnedCount = dictionary.count { it.correctAnswersCount >= MIN_CORRECT_ANSWER }
+                val percent = if (totalCount > 0)
+                    (learnedCount * 100) / totalCount else 0
+                println("Выучено $learnedCount из $totalCount слов | $percent%\n")
             }
 
             0 -> break
