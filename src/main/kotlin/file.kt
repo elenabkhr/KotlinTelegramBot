@@ -1,112 +1,61 @@
 package org.example
 
-import java.io.File
-
 const val MIN_CORRECT_ANSWER = 3
 const val NUMBER_VISIBLE_WORDS = 4
 
 data class Word(
-    val original: String,
+    val questionWord: String,
     val translate: String,
     var correctAnswersCount: Int = 0
 )
 
-fun loadDictionary(): List<Word> {
-    val wordsFile = File("words.txt")
-    val dictionary = mutableListOf<Word>()
-
-    val lines = wordsFile.readLines()
-    for (line in lines) {
-        val parts = line.split("|")
-        if (parts.size < 3) {
-            println("Строка некорректная")
-            continue
-        } else {
-            dictionary.add(
-                Word(
-                    original = parts[0],
-                    translate = parts[1],
-                    correctAnswersCount = parts[2].toIntOrNull() ?: 0
-                )
-            )
-        }
-    }
-    return dictionary
-}
-
-fun saveDictionary(dictionary: List<Word>) {
-    val wordsFile = File("words.txt")
-    wordsFile.writeText("")
-    dictionary.forEach { it ->
-        wordsFile.appendText("${it.original}|${it.translate}|${it.correctAnswersCount}\n")
-    }
+fun Question.asConsoleString(): String {
+    val variants = this.variants
+        .mapIndexed { index: Int, word: Word -> "${index + 1} - ${word.translate}" }
+        .joinToString("\n")
+    return this.correctAnswer.questionWord + "\n" + variants + "\n0 - Выйти в меню"
 }
 
 fun main() {
-    val dictionary = loadDictionary()
+    val trainer = LearnWordsTrainer()
 
     while (true) {
-        println("""
-        1 - Учить слова
-        2 - Статистика 
-        0 - Выход
-    """.trimIndent())
-
+        println("\nМеню:\n1 - Учить слова\n2 - Статистика\n0 - Выход")
         val userInput = readLine()?.toIntOrNull()
         when (userInput) {
             1 -> {
                 println("Выбран пункт: \"Учить слова\"")
 
                 while (true) {
-                    val notLearnedList = dictionary.filter { it.correctAnswersCount < MIN_CORRECT_ANSWER }
+                    val question = trainer.getNextQuestion()
 
-                    if (notLearnedList.isEmpty()) {
+                    if (question == null) {
                         println("Все слова в словаре выучены")
                         break
-                    }
+                    } else {
+                        println(question.asConsoleString())
 
-                    val questionWords = notLearnedList.take(NUMBER_VISIBLE_WORDS)
-                        .shuffled()
+                        val userAnswerInput = readLine()?.toIntOrNull()
+                        if (userAnswerInput == 0) break
 
-                    val correctAnswer = questionWords.random()
-
-                    println()
-                    println(correctAnswer.original)
-
-                    if (questionWords.size > 1) {
-                        for (i in 0..questionWords.size - 1) {
-                            println("${i + 1} - ${questionWords.map { it.translate }[i]}")
-                        }
-                    }
-                    println("-".repeat(10))
-                    println("0 - Меню")
-
-                    val userAnswerInput = readLine()?.toIntOrNull()
-                    val correctAnswerId = (questionWords.indexOf(correctAnswer) + 1)
-
-                    when (userAnswerInput) {
-                        (correctAnswerId) -> {
-                            correctAnswer.correctAnswersCount++
-                            saveDictionary(dictionary)
+                        if (trainer.checkAnswer(userAnswerInput?.minus(1))) {
                             println("Правильно!")
+                        } else {
+                            println(
+                                "Неправильно! ${question.correctAnswer.questionWord} " +
+                                        "- это ${question.correctAnswer.translate}"
+                            )
                         }
-
-                        0 -> break
-                        else -> println(
-                            "Неправильно! ${correctAnswer.original}" +
-                                    " - это ${correctAnswer.translate}"
-                        )
                     }
                 }
             }
 
             2 -> {
                 println("Выбран пункт: \"Статистика\"")
-                val totalCount = dictionary.size
-                val learnedCount = dictionary.count { it.correctAnswersCount >= MIN_CORRECT_ANSWER }
-                val percent = if (totalCount > 0)
-                    (learnedCount * 100) / totalCount else 0
-                println("Выучено $learnedCount из $totalCount слов | $percent%\n")
+
+                val statistics = trainer.getStatus()
+
+                println("Выучено ${statistics.learnedCount} из ${statistics.totalCount} слов | ${statistics.percent}")
             }
 
             0 -> break
