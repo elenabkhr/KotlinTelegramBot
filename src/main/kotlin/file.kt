@@ -1,8 +1,5 @@
 package org.example
 
-const val MIN_CORRECT_ANSWER = 3
-const val NUMBER_VISIBLE_WORDS = 4
-
 data class Word(
     val questionWord: String,
     val translate: String,
@@ -17,10 +14,15 @@ fun Question.asConsoleString(): String {
 }
 
 fun main() {
-    val trainer = LearnWordsTrainer()
+    val trainer = try {
+        LearnWordsTrainer(3, 4)
+    } catch (e: Exception) {
+        println("Невозможно загрузить словарь")
+        return
+    }
 
     while (true) {
-        println("\nМеню:\n1 - Учить слова\n2 - Статистика\n0 - Выход")
+        println("Меню:\n1 - Учить слова\n2 - Статистика\n0 - Выход")
         val userInput = readLine()?.toIntOrNull()
         when (userInput) {
             1 -> {
@@ -55,7 +57,7 @@ fun main() {
 
                 val statistics = trainer.getStatus()
 
-                println("Выучено ${statistics.learnedCount} из ${statistics.totalCount} слов | ${statistics.percent}")
+                println("Выучено ${statistics.learnedCount} из ${statistics.totalCount} слов | ${statistics.percent}%")
             }
 
             0 -> break

@@ -13,22 +13,29 @@ data class Question(
     val correctAnswer: Word,
 )
 
-class LearnWordsTrainer {
+class LearnWordsTrainer(private val learnedAnswerCount: Int = 3, private val countOfQuestionWords: Int = 4) {
     private var question: Question? = null
     private val dictionary = loadDictionary()
 
     fun getStatus(): Statistics {
         val totalCount = dictionary.size
-        val learnedCount = dictionary.count { it.correctAnswersCount >= MIN_CORRECT_ANSWER }
+        val learnedCount = dictionary.count { it.correctAnswersCount >= learnedAnswerCount }
         val percent = if (totalCount > 0)
             (learnedCount * 100) / totalCount else 0
         return Statistics(totalCount, learnedCount, percent)
     }
 
     fun getNextQuestion(): Question? {
-        val notLearnedList = dictionary.filter { it.correctAnswersCount < MIN_CORRECT_ANSWER }
+        val notLearnedList = dictionary.filter { it.correctAnswersCount < learnedAnswerCount }
         if (notLearnedList.isEmpty()) return null
-        val questionWords = notLearnedList.take(NUMBER_VISIBLE_WORDS).shuffled()
+        val questionWords = if (notLearnedList.size < countOfQuestionWords) {
+            val learnedList = dictionary.filter { it.correctAnswersCount >= learnedAnswerCount }.shuffled()
+            notLearnedList.shuffled().take(countOfQuestionWords) +
+                    learnedList.take(countOfQuestionWords - notLearnedList.size)
+        } else {
+            notLearnedList.shuffled().take(countOfQuestionWords)
+        }.shuffled()
+
         val correctAnswer = questionWords.random()
 
         question = Question(
@@ -52,24 +59,20 @@ class LearnWordsTrainer {
     }
 
     private fun loadDictionary(): List<Word> {
-        val wordsFile = File("words.txt")
         val dictionary = mutableListOf<Word>()
+        val wordsFile = File("words.txt")
 
         val lines = wordsFile.readLines()
         for (line in lines) {
             val parts = line.split("|")
-            if (parts.size < 3) {
-                println("Строка некорректная")
-                continue
-            } else {
-                dictionary.add(
-                    Word(
-                        questionWord = parts[0],
-                        translate = parts[1],
-                        correctAnswersCount = parts[2].toIntOrNull() ?: 0
-                    )
+
+            dictionary.add(
+                Word(
+                    questionWord = parts[0],
+                    translate = parts[1],
+                    correctAnswersCount = parts[2].toIntOrNull() ?: 0
                 )
-            }
+            )
         }
         return dictionary
     }
