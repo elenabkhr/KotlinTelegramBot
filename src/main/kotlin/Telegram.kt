@@ -7,20 +7,29 @@ import java.net.http.HttpResponse
 
 fun main(args: Array<String>) {
     val botToken = args[0]
-    val urlGetMe = "https://api.telegram.org/bot$botToken/getMe"
-    val urlGetUpdates = "https://api.telegram.org/bot$botToken/getUpdates"
+    var updateId = 0
 
-    val builder: HttpClient.Builder = HttpClient.newBuilder()
-    val client: HttpClient = builder.build()
+    while (true) {
+        Thread.sleep(2000)
+        val updates: String = getUpdates(botToken, updateId)
+        println(updates)
 
-    val requestGetMe: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetMe)).build()
+        val startUpdateId = updates.lastIndexOf("update_id")
+        val endUpdateId = updates.lastIndexOf(",\n\"message\"")
+        if (startUpdateId == -1 || endUpdateId == -1) continue
+        val updateIdString = updates.substring(startUpdateId + 11, endUpdateId)
+        updateId = updateIdString.toInt() + 1
+    }
+}
+
+fun getUpdates(botToken: String, updateId: Int): String {
+    val urlGetUpdates = "https://api.telegram.org/bot$botToken/getUpdates?offset=$updateId"
+    val client: HttpClient = HttpClient.newBuilder().build()
+
     val requestGetUpdates: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
 
-    val responseGetMe: HttpResponse<String> =
-        client.send(requestGetMe, HttpResponse.BodyHandlers.ofString())
     val responseGetUpdates: HttpResponse<String> =
         client.send(requestGetUpdates, HttpResponse.BodyHandlers.ofString())
 
-    println(responseGetMe.body())
-    println(responseGetUpdates.body())
+    return responseGetUpdates.body()
 }
