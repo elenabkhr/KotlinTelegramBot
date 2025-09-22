@@ -14,17 +14,14 @@ fun main(args: Array<String>) {
         val updates: String = getUpdates(botToken, updateId)
         println(updates)
 
-        val updateIdRegex: Regex = "\"update_id\":(\\d+)".toRegex()
-        val matchResultId: MatchResult? = updateIdRegex.find(updates)
-        val groupIdLast = matchResultId?.groups?.size?.minus(1) ?: 0
-        val groupId = matchResultId?.groups?.get(groupIdLast)
-        if (groupId == null) continue
-        updateId = groupId.value.toInt() + 1
+        val updateIdRegex: Regex = "\"update_id\":\\s*(\\d+)".toRegex()
+        updateId = updateIdRegex.findAll(updates).lastOrNull()?.groups?.get(1)?.value?.toInt()?.plus(1)
+            ?: updateId
 
-        val messageTextRegex: Regex = "\"text\":\"(.+?)\"".toRegex()
+        val messageTextRegex: Regex = "\"text\":\\s*\"(.+?)\"".toRegex()
         val matchResult: MatchResult? = messageTextRegex.find(updates)
         val groups = matchResult?.groups
-        val text = groups?.get(1)?.value
+        val text = groups?.get(1)?.value ?: "null"
         println(text)
     }
 }
