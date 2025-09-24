@@ -8,7 +8,7 @@ fun main(args: Array<String>) {
 
     while (true) {
         Thread.sleep(2000)
-        val updates: String = trainerBot.getUpdates(botToken, updateId)
+        val updates: String = trainerBot.getUpdates(updateId)
         println(updates)
 
         val updateIdRegex: Regex = "\"update_id\":\\s*(\\d+)".toRegex()
@@ -23,7 +23,7 @@ fun main(args: Array<String>) {
 
         if (chatIdMatch != null && textMatch != null) {
             val chatIdMessage = chatIdMatch.groupValues[1]
-            trainerBot.sendMessage(botToken, chatIdMessage.toInt(), textMessage)
+            trainerBot.sendMessage(chatIdMessage.toInt(), textMessage)
         }
     }
 }
