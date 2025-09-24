@@ -4,7 +4,7 @@ fun main(args: Array<String>) {
     val botToken = args[0]
     var updateId = 0
     val textMessage = "Hello"
-    val trainerBot = TelegramBotService()
+    val trainerBot = TelegramBotService(botToken)
 
     while (true) {
         Thread.sleep(2000)
