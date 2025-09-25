@@ -1,11 +1,5 @@
 package org.example
 
-data class Word(
-    val questionWord: String,
-    val translate: String,
-    var correctAnswersCount: Int = 0
-)
-
 fun Question.asConsoleString(): String {
     val variants = this.variants
         .mapIndexed { index: Int, word: Word -> "${index + 1} - ${word.translate}" }
