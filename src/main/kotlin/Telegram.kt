@@ -3,27 +3,44 @@ package org.example
 fun main(args: Array<String>) {
     val botToken = args[0]
     var updateId = 0
-    val textMessage = "Hello"
     val trainerBot = TelegramBotService(botToken)
+
+    val trainer = try {
+        LearnWordsTrainer(3, 4)
+    } catch (e: Exception) {
+        println("Невозможно загрузить словарь")
+        return
+    }
+
+    val updateIdRegex: Regex = "\"update_id\":\\s*(\\d+)".toRegex()
+    val chatIdRegex: Regex = "\"chat\":\\{\"id\":\\s*(\\d+)".toRegex()
+    val messageTextRegex: Regex = "\"text\":\\s*\"(.*?)\"".toRegex()
+    val dataRegex: Regex = "\"data\":\\s*\"(.+?)\"".toRegex()
 
     while (true) {
         Thread.sleep(2000)
         val updates: String = trainerBot.getUpdates(updateId)
         println(updates)
 
-        val updateIdRegex: Regex = "\"update_id\":\\s*(\\d+)".toRegex()
         updateId = updateIdRegex.findAll(updates).lastOrNull()?.groups?.get(1)?.value?.toInt()?.plus(1)
             ?: updateId
 
-        val chatIdRegex: Regex = "\"chat\":\\{\"id\":\\s*(\\d+)".toRegex()
-        val messageTextRegex: Regex = "\"text\":\\s*\"Hello\"".toRegex()
+        val chatId = chatIdRegex.find(updates)?.groups?.get(1)?.value?.toIntOrNull() ?: continue
+        val text = messageTextRegex.find(updates)?.groups?.get(1)?.value ?: continue
+        val data = dataRegex.find(updates)?.groups?.get(1)?.value ?: continue
 
-        val chatIdMatch = chatIdRegex.find(updates)
-        val textMatch = messageTextRegex.find(updates)
+        if (text == "hello") trainerBot.sendMessage(chatId, "hello")
+        if (text == "/start") trainerBot.sendMenu(chatId)
 
-        if (chatIdMatch != null && textMatch != null) {
-            val chatIdMessage = chatIdMatch.groupValues[1]
-            trainerBot.sendMessage(chatIdMessage.toInt(), textMessage)
+        if (data.lowercase() == STATISTICS_CALLBACK) {
+            val stats = trainer.getStatus()
+            trainerBot.sendMessage(
+                chatId,
+                "Выучено ${stats.totalCount} из ${stats.learnedCount} слов | ${stats.percent}%"
+            )
+        }
+        if (data.lowercase() == LEARN_WORDS_CALLBACK) {
+
         }
     }
 }
