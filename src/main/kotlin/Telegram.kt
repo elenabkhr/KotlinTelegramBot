@@ -25,18 +25,22 @@ fun main(args: Array<String>) {
         updateId = updateIdRegex.findAll(updates).lastOrNull()?.groups?.get(1)?.value?.toInt()?.plus(1)
             ?: updateId
 
-        val chatId = chatIdRegex.find(updates)?.groups?.get(1)?.value?.toInt()
-        val text = messageTextRegex.find(updates)?.groups?.get(1)?.value
-        val data = dataRegex.find(updates)?.groups?.get(1)?.value
+        val chatId = chatIdRegex.find(updates)?.groups?.get(1)?.value?.toIntOrNull() ?: continue
+        val text = messageTextRegex.find(updates)?.groups?.get(1)?.value ?: continue
+        val data = dataRegex.find(updates)?.groups?.get(1)?.value ?: continue
 
-        if (chatId != null && text == "hello") {
-            trainerBot.sendMessage(chatId, "hello")
+        if (text == "hello") trainerBot.sendMessage(chatId, "hello")
+        if (text == "/start") trainerBot.sendMenu(chatId)
+
+        if (data.lowercase() == STATISTICS_CALLBACK) {
+            val stats = trainer.getStatus()
+            trainerBot.sendMessage(
+                chatId,
+                "Выучено ${stats.totalCount} из ${stats.learnedCount} слов | ${stats.percent}%"
+            )
         }
-        if (chatId != null && text == "/start") {
-            trainerBot.sendMenu(chatId)
-        }
-        if (data?.lowercase() == "statistics_clicker" && chatId != null) {
-            trainerBot.sendMessage(chatId, "Выучено 10 из 10 слов | 100%")
+        if (data.lowercase() == LEARN_WORDS_CALLBACK) {
+
         }
     }
 }
