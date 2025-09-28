@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets
 const val TELEGRAM_BOT_API_URL = "https://api.telegram.org/bot"
 const val LEARN_WORDS_CALLBACK = "learn_words_clicker"
 const val STATISTICS_CALLBACK = "statistics_clicker"
+const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 
 class TelegramBotService(val botToken: String) {
     val client: HttpClient = HttpClient.newBuilder().build()
@@ -47,8 +48,6 @@ class TelegramBotService(val botToken: String) {
     fun sendMenu(chatId: Int): String {
         val urlSendMessage = "$TELEGRAM_BOT_API_URL$botToken/sendMessage"
 
-        val jsonMediaType = "application/json".toMediaType()
-
         val sendMenuBody = """
                 {
                     "chat_id": $chatId,
@@ -70,7 +69,46 @@ class TelegramBotService(val botToken: String) {
                 }
             """.trimIndent()
 
-        val requestBody = sendMenuBody.toRequestBody(jsonMediaType)
+        val requestBody = sendMenuBody.toRequestBody("application/json".toMediaType())
+
+        val request: Request = Request.Builder()
+            .url(urlSendMessage)
+            .post(requestBody)
+            .build()
+
+        clientOkHttp.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: ""
+            return body
+        }
+    }
+
+    fun sendQuestion(chatId: Int, question: Question): String {
+        val urlSendMessage = "$TELEGRAM_BOT_API_URL$botToken/sendMessage"
+
+        val stringBody = question.variants.mapIndexed { index, question ->
+            """
+                {
+                    "text": "${question.translate}",
+                    "callback_data": "${CALLBACK_DATA_ANSWER_PREFIX}$index"
+                }
+            """.trimIndent()
+        }.joinToString(separator = ",\n")
+
+        val sendQuestionBody = """
+                {
+                    "chat_id": $chatId,
+                    "text": "${question.correctAnswer.questionWord}",
+                    "reply_markup": {
+                        "inline_keyboard": [
+                            [
+                                $stringBody
+                            ]
+                        ]
+                    }
+                }
+            """.trimIndent()
+
+        val requestBody = sendQuestionBody.toRequestBody("application/json".toMediaType())
 
         val request: Request = Request.Builder()
             .url(urlSendMessage)

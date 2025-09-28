@@ -39,8 +39,21 @@ fun main(args: Array<String>) {
                 "Выучено ${stats.totalCount} из ${stats.learnedCount} слов | ${stats.percent}%"
             )
         }
-        if (data.lowercase() == LEARN_WORDS_CALLBACK) {
 
+        fun checkNextQuestionAndSend(
+            trainer: LearnWordsTrainer,
+            telegramBotService: TelegramBotService,
+            chatId: Int
+        ) {
+            if (data.lowercase() == LEARN_WORDS_CALLBACK) {
+                val question = trainer.getNextQuestion()
+                if (question == null) {
+                    trainerBot.sendMessage(chatId, "Вы выучили все слова в базе")
+                } else {
+                    trainerBot.sendQuestion(chatId, question)
+                }
+            }
         }
+        checkNextQuestionAndSend(trainer, trainerBot, chatId)
     }
 }
