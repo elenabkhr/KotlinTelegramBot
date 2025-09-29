@@ -51,9 +51,23 @@ fun main(args: Array<String>) {
                     trainerBot.sendMessage(chatId, "Вы выучили все слова в базе")
                 } else {
                     trainerBot.sendQuestion(chatId, question)
+                    if (data.startsWith(CALLBACK_DATA_ANSWER_PREFIX)) {
+                        val userAnswerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
+                        if (trainer.checkAnswer(userAnswerIndex)) {
+                            trainerBot.sendMessage(chatId, "Правильно!")
+                        } else {
+                            trainerBot.sendMessage(
+                                chatId, "Неправильно! ${question.correctAnswer.questionWord}" +
+                                        " - это ${question.correctAnswer.translate}"
+                            )
+
+                            checkNextQuestionAndSend(trainer, trainerBot, chatId)
+                        }
+                    }
                 }
             }
         }
+
         checkNextQuestionAndSend(trainer, trainerBot, chatId)
     }
 }
