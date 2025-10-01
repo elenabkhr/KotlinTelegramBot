@@ -12,6 +12,23 @@ fun main(args: Array<String>) {
         return
     }
 
+    fun checkNextQuestionAndSend(
+        trainer: LearnWordsTrainer,
+        trainerBot: TelegramBotService,
+        chatId: Int,
+        data: String,
+    ): Question? {
+        val question = trainer.getNextQuestion()
+        if (data.lowercase() == LEARN_WORDS_CALLBACK) {
+            if (question == null) {
+                trainerBot.sendMessage(chatId, "Вы выучили все слова в базе")
+            } else {
+                trainerBot.sendQuestion(chatId, question)
+            }
+        }
+        return question
+    }
+
     val updateIdRegex: Regex = "\"update_id\":\\s*(\\d+)".toRegex()
     val chatIdRegex: Regex = "\"chat\":\\{\"id\":\\s*(\\d+)".toRegex()
     val messageTextRegex: Regex = "\"text\":\\s*\"(.*?)\"".toRegex()
@@ -40,34 +57,19 @@ fun main(args: Array<String>) {
             )
         }
 
-        fun checkNextQuestionAndSend(
-            trainer: LearnWordsTrainer,
-            telegramBotService: TelegramBotService,
-            chatId: Int
-        ) {
-            if (data.lowercase() == LEARN_WORDS_CALLBACK) {
-                val question = trainer.getNextQuestion()
-                if (question == null) {
-                    trainerBot.sendMessage(chatId, "Вы выучили все слова в базе")
-                } else {
-                    trainerBot.sendQuestion(chatId, question)
-                    if (data.startsWith(CALLBACK_DATA_ANSWER_PREFIX)) {
-                        val userAnswerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
-                        if (trainer.checkAnswer(userAnswerIndex)) {
-                            trainerBot.sendMessage(chatId, "Правильно!")
-                        } else {
-                            trainerBot.sendMessage(
-                                chatId, "Неправильно! ${question.correctAnswer.questionWord}" +
-                                        " - это ${question.correctAnswer.translate}"
-                            )
+        if (data.startsWith(CALLBACK_DATA_ANSWER_PREFIX)) {
+            val userAnswerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
+            val question = checkNextQuestionAndSend(trainer, trainerBot, chatId, data)
+            if (trainer.checkAnswer(userAnswerIndex)) {
+                trainerBot.sendMessage(chatId, "Правильно!")
 
-                            checkNextQuestionAndSend(trainer, trainerBot, chatId)
-                        }
-                    }
-                }
+            } else {
+                trainerBot.sendMessage(
+                    chatId, "Неправильно! ${question?.correctAnswer?.questionWord}" +
+                            " - это ${question?.correctAnswer?.translate}"
+                )
             }
+            checkNextQuestionAndSend(trainer, trainerBot, chatId, data)
         }
-
-        checkNextQuestionAndSend(trainer, trainerBot, chatId)
     }
 }
