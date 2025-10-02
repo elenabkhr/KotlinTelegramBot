@@ -3,30 +3,13 @@ package org.example
 fun main(args: Array<String>) {
     val botToken = args[0]
     var updateId = 0
-    val trainerBot = TelegramBotService(botToken)
+    val botService = TelegramBotService(botToken)
 
     val trainer = try {
         LearnWordsTrainer(3, 4)
     } catch (e: Exception) {
-        println("Невозможно загрузить словарь")
+        println("Невозможно загрузить словарь: ${e.localizedMessage}")
         return
-    }
-
-    fun checkNextQuestionAndSend(
-        trainer: LearnWordsTrainer,
-        trainerBot: TelegramBotService,
-        chatId: Int,
-        data: String,
-    ): Question? {
-        val question = trainer.getNextQuestion()
-        if (data.lowercase() == LEARN_WORDS_CALLBACK) {
-            if (question == null) {
-                trainerBot.sendMessage(chatId, "Вы выучили все слова в базе")
-            } else {
-                trainerBot.sendQuestion(chatId, question)
-            }
-        }
-        return question
     }
 
     val updateIdRegex: Regex = "\"update_id\":\\s*(\\d+)".toRegex()
@@ -36,40 +19,58 @@ fun main(args: Array<String>) {
 
     while (true) {
         Thread.sleep(2000)
-        val updates: String = trainerBot.getUpdates(updateId)
+        val updates: String = botService.getUpdates(updateId)
         println(updates)
 
         updateId = updateIdRegex.findAll(updates).lastOrNull()?.groups?.get(1)?.value?.toInt()?.plus(1)
             ?: updateId
 
         val chatId = chatIdRegex.find(updates)?.groups?.get(1)?.value?.toIntOrNull() ?: continue
-        val text = messageTextRegex.find(updates)?.groups?.get(1)?.value ?: continue
-        val data = dataRegex.find(updates)?.groups?.get(1)?.value ?: continue
+        val text = messageTextRegex.find(updates)?.groups?.get(1)?.value
+        val data = dataRegex.find(updates)?.groups?.get(1)?.value
 
-        if (text == "hello") trainerBot.sendMessage(chatId, "hello")
-        if (text == "/start") trainerBot.sendMenu(chatId)
+        when {
+            text == COMMAND_START -> {
+                botService.sendMenu(chatId)
+            }
 
-        if (data.lowercase() == STATISTICS_CALLBACK) {
-            val stats = trainer.getStatus()
-            trainerBot.sendMessage(
-                chatId,
-                "Выучено ${stats.totalCount} из ${stats.learnedCount} слов | ${stats.percent}%"
-            )
-        }
-
-        if (data.startsWith(CALLBACK_DATA_ANSWER_PREFIX)) {
-            val userAnswerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
-            val question = checkNextQuestionAndSend(trainer, trainerBot, chatId, data)
-            if (trainer.checkAnswer(userAnswerIndex)) {
-                trainerBot.sendMessage(chatId, "Правильно!")
-
-            } else {
-                trainerBot.sendMessage(
-                    chatId, "Неправильно! ${question?.correctAnswer?.questionWord}" +
-                            " - это ${question?.correctAnswer?.translate}"
+            data?.lowercase() == STATISTICS_CALLBACK -> {
+                val stats = trainer.getStatus()
+                botService.sendMessage(
+                    chatId,
+                    "Выучено ${stats.totalCount} из ${stats.learnedCount} слов | ${stats.percent}%"
                 )
             }
-            checkNextQuestionAndSend(trainer, trainerBot, chatId, data)
+
+            data?.lowercase() == LEARN_WORDS_CALLBACK -> {
+                checkNextQuestionAndSend(trainer, botService, chatId)
+            }
+
+            data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true -> {
+                val userAnswerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
+                if (trainer.checkAnswer(userAnswerIndex)) {
+                    botService.sendMessage(chatId, "Правильно!")
+                } else {
+                    val correctAnswer = trainer.currentQuestion?.correctAnswer
+                    botService.sendMessage(
+                        chatId, "Неправильно! ${correctAnswer?.questionWord} - это ${correctAnswer?.translate}"
+                    )
+                }
+                checkNextQuestionAndSend(trainer, botService, chatId)
+            }
         }
+    }
+}
+
+fun checkNextQuestionAndSend(
+    trainer: LearnWordsTrainer,
+    trainerBot: TelegramBotService,
+    chatId: Int,
+) {
+    val question = trainer.getNextQuestion()
+    if (question == null) {
+        trainerBot.sendMessage(chatId, "Вы выучили все слова в базе")
+    } else {
+        trainerBot.sendQuestion(chatId, question)
     }
 }

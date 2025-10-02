@@ -12,11 +12,13 @@ import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 
 const val TELEGRAM_BOT_API_URL = "https://api.telegram.org/bot"
+const val COMMAND_START = "/start"
 const val LEARN_WORDS_CALLBACK = "learn_words_clicker"
 const val STATISTICS_CALLBACK = "statistics_clicker"
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 
 class TelegramBotService(val botToken: String) {
+
     val client: HttpClient = HttpClient.newBuilder().build()
     val clientOkHttp = OkHttpClient()
 
