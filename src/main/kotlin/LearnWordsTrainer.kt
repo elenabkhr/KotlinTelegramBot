@@ -1,7 +1,9 @@
 package org.example
 
+import kotlinx.serialization.Serializable
 import java.io.File
 
+@Serializable
 data class Word(
     val questionWord: String,
     val translate: String,
