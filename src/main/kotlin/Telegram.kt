@@ -2,7 +2,6 @@ package org.example
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 @Serializable
 data class Update(
@@ -54,69 +53,67 @@ fun main(args: Array<String>) {
         return
     }
 
-    val json = Json {
-        ignoreUnknownKeys = true
-    }
-
     while (true) {
         Thread.sleep(2000)
-        val responseString: String = botService.getUpdates(lastUpdateId)
-        println(responseString)
 
-        val response: Response = json.decodeFromString(responseString)
+        val response = botService.getUpdates(lastUpdateId) ?: continue
+        println(response)
+
         val updates = response.result
         val firstUpdate = updates.firstOrNull() ?: continue
         val updateId = firstUpdate.updateId
         lastUpdateId = updateId + 1
 
-        val chatId = firstUpdate.message?.chat?.id ?: firstUpdate.callbackQuery?.message?.chat?.id
+        val chatId = firstUpdate.message?.chat?.id
+            ?: firstUpdate.callbackQuery?.message?.chat?.id
+            ?: continue
+
         val text = firstUpdate.message?.text
         val data = firstUpdate.callbackQuery?.data
 
         when {
             text == COMMAND_START -> {
-                botService.sendMenu(json, chatId)
+                botService.sendMenu(chatId)
             }
 
             data?.lowercase() == STATISTICS_CALLBACK -> {
                 val stats = trainer.getStatus()
                 botService.sendMessage(
-                    json, chatId,
+                    chatId,
                     "Выучено ${stats.learnedCount} из ${stats.totalCount} слов | ${stats.percent}%"
                 )
             }
 
             data?.lowercase() == LEARN_WORDS_CALLBACK -> {
-                checkNextQuestionAndSend(json, trainer, botService, chatId)
+                checkNextQuestionAndSend(trainer, botService, chatId)
             }
 
             data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true -> {
                 val userAnswerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
                 if (trainer.checkAnswer(userAnswerIndex)) {
-                    botService.sendMessage(json, chatId, "Правильно!")
+                    botService.sendMessage(chatId, "Правильно!")
                 } else {
                     val correctAnswer = trainer.currentQuestion?.correctAnswer
                     botService.sendMessage(
-                        json, chatId,
+                        chatId,
                         "Неправильно! ${correctAnswer?.questionWord} - это ${correctAnswer?.translate}"
                     )
                 }
-                checkNextQuestionAndSend(json, trainer, botService, chatId)
+                checkNextQuestionAndSend(trainer, botService, chatId)
             }
         }
     }
 }
 
 fun checkNextQuestionAndSend(
-    json: Json,
     trainer: LearnWordsTrainer,
     trainerBot: TelegramBotService,
-    chatId: Long?,
+    chatId: Long,
 ) {
     val question = trainer.getNextQuestion()
     if (question == null) {
-        trainerBot.sendMessage(json, chatId, "Вы выучили все слова в базе")
+        trainerBot.sendMessage(chatId, "Вы выучили все слова в базе")
     } else {
-        trainerBot.sendQuestion(json, chatId, question)
+        trainerBot.sendQuestion(chatId, question)
     }
 }

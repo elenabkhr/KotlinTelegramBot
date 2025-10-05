@@ -21,7 +21,7 @@ const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 @Serializable
 data class SendMessageRequest(
     @SerialName("chat_id")
-    val chatId: Long?,
+    val chatId: Long,
     @SerialName("text")
     val text: String,
     @SerialName("reply_markup")
@@ -40,24 +40,37 @@ data class InlineKeyboard(
     val callbackData: String,
     @SerialName("text")
     val text: String,
-    )
+)
+
+val json = Json {
+    ignoreUnknownKeys = true
+}
 
 class TelegramBotService(val botToken: String) {
 
     val client: HttpClient = HttpClient.newBuilder().build()
     val clientOkHttp = OkHttpClient()
 
-    fun getUpdates(updateId: Long): String {
+    fun getUpdates(updateId: Long): Response? {
         val urlGetUpdates = "$TELEGRAM_BOT_API_URL$botToken/getUpdates?offset=$updateId"
 
-        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
+        val request: HttpRequest = HttpRequest.newBuilder()
+            .uri(URI.create(urlGetUpdates))
+            .build()
 
-        val response: HttpResponse<String> =
-            client.send(request, HttpResponse.BodyHandlers.ofString())
-        return response.body()
+        return try {
+            val response: HttpResponse<String> =
+                client.send(request, HttpResponse.BodyHandlers.ofString())
+            val responseBody = response.body()
+
+            json.decodeFromString<Response>(responseBody)
+        } catch (e: Exception) {
+            println("Ошибка парсинга: ${e.message}")
+            null
+        }
     }
 
-    fun sendMessage(json: Json, chatId: Long?, message: String): String {
+    fun sendMessage(chatId: Long, message: String): String {
         val urlSendMessage = "$TELEGRAM_BOT_API_URL$botToken/sendMessage"
 
         val requestBody = SendMessageRequest(
@@ -81,7 +94,7 @@ class TelegramBotService(val botToken: String) {
         }
     }
 
-    fun sendMenu(json: Json, chatId: Long?): String {
+    fun sendMenu(chatId: Long): String {
         val urlSendMessage = "$TELEGRAM_BOT_API_URL$botToken/sendMessage"
 
         val requestBody = SendMessageRequest(
@@ -113,7 +126,7 @@ class TelegramBotService(val botToken: String) {
         }
     }
 
-    fun sendQuestion(json: Json, chatId: Long?, question: Question): String {
+    fun sendQuestion(chatId: Long, question: Question): String {
         val urlSendMessage = "$TELEGRAM_BOT_API_URL$botToken/sendMessage"
 
         val requestBody = SendMessageRequest(
