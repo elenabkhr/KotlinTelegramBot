@@ -2,6 +2,7 @@ package org.example
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.text.substringAfter
 
 @Serializable
 data class Update(
@@ -44,14 +45,8 @@ data class Chat(
 fun main(args: Array<String>) {
     val botToken = args[0]
     var lastUpdateId = 0L
+    val trainers = HashMap<Long, LearnWordsTrainer>()
     val botService = TelegramBotService(botToken)
-
-    val trainer = try {
-        LearnWordsTrainer(3, 4)
-    } catch (e: Exception) {
-        println("Невозможно загрузить словарь: ${e.localizedMessage}")
-        return
-    }
 
     while (true) {
         Thread.sleep(2000)
@@ -59,48 +54,56 @@ fun main(args: Array<String>) {
         val response = botService.getUpdates(lastUpdateId) ?: continue
         println(response)
 
-        val updates = response.result
-        val firstUpdate = updates.firstOrNull() ?: continue
-        val updateId = firstUpdate.updateId
-        lastUpdateId = updateId + 1
+        if (response.result.isEmpty()) continue
+        val sortedUpdates = response.result.sortedBy { it.updateId }
+        sortedUpdates.forEach { handleUpdate(it, trainers, botService) }
+        lastUpdateId = sortedUpdates.last().updateId + 1
+    }
+}
 
-        val chatId = firstUpdate.message?.chat?.id
-            ?: firstUpdate.callbackQuery?.message?.chat?.id
-            ?: continue
+fun handleUpdate(update: Update, trainers: HashMap<Long, LearnWordsTrainer>, botService: TelegramBotService) {
+    val chatId = update.message?.chat?.id
+        ?: update.callbackQuery?.message?.chat?.id
+        ?: return
+    val text = update.message?.text
+    val data = update.callbackQuery?.data
 
-        val text = firstUpdate.message?.text
-        val data = firstUpdate.callbackQuery?.data
+    val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer("$chatId.txt") }
 
-        when {
-            text == COMMAND_START -> {
-                botService.sendMenu(chatId)
-            }
+    when {
+        text == COMMAND_START -> {
+            botService.sendMenu(chatId)
+        }
 
-            data?.lowercase() == STATISTICS_CALLBACK -> {
-                val stats = trainer.getStatus()
+        data?.lowercase() == STATISTICS_CALLBACK -> {
+            val stats = trainer.getStatus()
+            botService.sendMessage(
+                chatId,
+                "Выучено ${stats.learnedCount} из ${stats.totalCount} слов | ${stats.percent}%"
+            )
+        }
+
+        data?.lowercase() == LEARN_WORDS_CALLBACK -> {
+            checkNextQuestionAndSend(trainer, botService, chatId)
+        }
+
+        data?.lowercase() == RESET_CALLBACK -> {
+            trainer.resetProgress()
+            botService.sendMessage(chatId, "Прогресс сброшен")
+        }
+
+        data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true -> {
+            val userAnswerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
+            if (trainer.checkAnswer(userAnswerIndex)) {
+                botService.sendMessage(chatId, "Правильно!")
+            } else {
+                val correctAnswer = trainer.currentQuestion?.correctAnswer
                 botService.sendMessage(
                     chatId,
-                    "Выучено ${stats.learnedCount} из ${stats.totalCount} слов | ${stats.percent}%"
+                    "Неправильно! ${correctAnswer?.questionWord} - это ${correctAnswer?.translate}"
                 )
             }
-
-            data?.lowercase() == LEARN_WORDS_CALLBACK -> {
-                checkNextQuestionAndSend(trainer, botService, chatId)
-            }
-
-            data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true -> {
-                val userAnswerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
-                if (trainer.checkAnswer(userAnswerIndex)) {
-                    botService.sendMessage(chatId, "Правильно!")
-                } else {
-                    val correctAnswer = trainer.currentQuestion?.correctAnswer
-                    botService.sendMessage(
-                        chatId,
-                        "Неправильно! ${correctAnswer?.questionWord} - это ${correctAnswer?.translate}"
-                    )
-                }
-                checkNextQuestionAndSend(trainer, botService, chatId)
-            }
+            checkNextQuestionAndSend(trainer, botService, chatId)
         }
     }
 }
