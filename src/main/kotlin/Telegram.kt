@@ -1,8 +1,49 @@
 package org.example
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Update(
+    @SerialName("update_id")
+    val updateId: Long,
+    @SerialName("message")
+    val message: Message? = null,
+    @SerialName("callback_query")
+    val callbackQuery: CallbackQuery? = null,
+)
+
+@Serializable
+data class Response(
+    @SerialName("result")
+    val result: List<Update>,
+)
+
+@Serializable
+data class Message(
+    @SerialName("text")
+    val text: String,
+    @SerialName("chat")
+    val chat: Chat,
+)
+
+@Serializable
+data class CallbackQuery(
+    @SerialName("data")
+    val data: String? = null,
+    @SerialName("message")
+    val message: Message? = null,
+)
+
+@Serializable
+data class Chat(
+    @SerialName("id")
+    val id: Long,
+)
+
 fun main(args: Array<String>) {
     val botToken = args[0]
-    var updateId = 0
+    var lastUpdateId = 0L
     val botService = TelegramBotService(botToken)
 
     val trainer = try {
@@ -12,22 +53,23 @@ fun main(args: Array<String>) {
         return
     }
 
-    val updateIdRegex: Regex = "\"update_id\":\\s*(\\d+)".toRegex()
-    val chatIdRegex: Regex = "\"chat\":\\{\"id\":\\s*(\\d+)".toRegex()
-    val messageTextRegex: Regex = "\"text\":\\s*\"(.*?)\"".toRegex()
-    val dataRegex: Regex = "\"data\":\\s*\"(.+?)\"".toRegex()
-
     while (true) {
         Thread.sleep(2000)
-        val updates: String = botService.getUpdates(updateId)
-        println(updates)
 
-        updateId = updateIdRegex.findAll(updates).lastOrNull()?.groups?.get(1)?.value?.toInt()?.plus(1)
-            ?: updateId
+        val response = botService.getUpdates(lastUpdateId) ?: continue
+        println(response)
 
-        val chatId = chatIdRegex.find(updates)?.groups?.get(1)?.value?.toIntOrNull() ?: continue
-        val text = messageTextRegex.find(updates)?.groups?.get(1)?.value
-        val data = dataRegex.find(updates)?.groups?.get(1)?.value
+        val updates = response.result
+        val firstUpdate = updates.firstOrNull() ?: continue
+        val updateId = firstUpdate.updateId
+        lastUpdateId = updateId + 1
+
+        val chatId = firstUpdate.message?.chat?.id
+            ?: firstUpdate.callbackQuery?.message?.chat?.id
+            ?: continue
+
+        val text = firstUpdate.message?.text
+        val data = firstUpdate.callbackQuery?.data
 
         when {
             text == COMMAND_START -> {
@@ -38,7 +80,7 @@ fun main(args: Array<String>) {
                 val stats = trainer.getStatus()
                 botService.sendMessage(
                     chatId,
-                    "Выучено ${stats.totalCount} из ${stats.learnedCount} слов | ${stats.percent}%"
+                    "Выучено ${stats.learnedCount} из ${stats.totalCount} слов | ${stats.percent}%"
                 )
             }
 
@@ -53,7 +95,8 @@ fun main(args: Array<String>) {
                 } else {
                     val correctAnswer = trainer.currentQuestion?.correctAnswer
                     botService.sendMessage(
-                        chatId, "Неправильно! ${correctAnswer?.questionWord} - это ${correctAnswer?.translate}"
+                        chatId,
+                        "Неправильно! ${correctAnswer?.questionWord} - это ${correctAnswer?.translate}"
                     )
                 }
                 checkNextQuestionAndSend(trainer, botService, chatId)
@@ -65,7 +108,7 @@ fun main(args: Array<String>) {
 fun checkNextQuestionAndSend(
     trainer: LearnWordsTrainer,
     trainerBot: TelegramBotService,
-    chatId: Int,
+    chatId: Long,
 ) {
     val question = trainer.getNextQuestion()
     if (question == null) {
