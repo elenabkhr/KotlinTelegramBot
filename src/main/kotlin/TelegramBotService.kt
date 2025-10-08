@@ -16,6 +16,7 @@ const val TELEGRAM_BOT_API_URL = "https://api.telegram.org/bot"
 const val COMMAND_START = "/start"
 const val LEARN_WORDS_CALLBACK = "learn_words_clicker"
 const val STATISTICS_CALLBACK = "statistics_clicker"
+const val RESET_CALLBACK = "reset_clicker"
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 
 @Serializable
@@ -105,6 +106,9 @@ class TelegramBotService(val botToken: String) {
                     listOf(
                         InlineKeyboard(text = "Изучать слова", callbackData = LEARN_WORDS_CALLBACK),
                         InlineKeyboard(text = "Статистика", callbackData = STATISTICS_CALLBACK),
+                    ),
+                    listOf(
+                        InlineKeyboard(text = "Сбросить прогресс", callbackData = RESET_CALLBACK)
                     )
                 )
             )
