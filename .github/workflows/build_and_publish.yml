@@ -50,7 +50,7 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
-          username:  ${{ secrets.SSH_USER }}
+          username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
             sudo systemctl restart english-learning-bot
