@@ -106,4 +106,33 @@ class LearnWordsTrainer(
         dictionary.forEach { it.correctAnswersCount = 0 }
         saveDictionary()
     }
+
+    private fun loadFileId(): MutableMap<String, String> {
+        val fileFileId = mutableMapOf<String, String>()
+        val file = File("file_id.txt")
+
+        file.forEachLine { line ->
+            val parts = line.split("|")
+            if (parts.size == 2) {
+                val words = parts[0]
+                val fileId = parts[1]
+                fileFileId[words] = fileId
+            }
+        }
+        return fileFileId
+    }
+
+    private fun saveFileId(word: String, fileId: String) {
+        val file = File("file_id.txt")
+        file.appendText("$word|$fileId\n")
+    }
+
+    fun sendWordPhoto(chatId: Long, word: String) {
+        val fileId = loadFileId()
+        val fileIdWords = fileId[word]
+
+        if (fileIdWords != null) {
+
+        }
+    }
 }
