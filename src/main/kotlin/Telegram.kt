@@ -42,6 +42,24 @@ data class Chat(
     val id: Long,
 )
 
+@Serializable
+data class SendPhotoResponse(
+    @SerialName("result")
+    val result: MessagePhoto,
+)
+
+@Serializable
+data class MessagePhoto(
+    @SerialName("photo")
+    val photo: List<Photo>
+)
+
+@Serializable
+data class Photo(
+    @SerialName("file_id")
+    val fileId: String,
+)
+
 fun main(args: Array<String>) {
     val botToken = args[0]
     var lastUpdateId = 0L
